@@ -1,0 +1,8 @@
+node_modules
+.git
+.github
+.gitignore
+Dockerfile:Zone.Identifier
+npm-debug.log
+test-results.json
+npm-audit.json
