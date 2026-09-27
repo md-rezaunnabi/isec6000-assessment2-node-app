@@ -1,17 +1,13 @@
 pipeline {
-    agent {
-        docker {
-            image 'rezaunnabi/isec6000-node16-docker-agent:latest'
-            args '--user 1000:1000'
-        }
-    }
+    agent any
 
     environment {
+        // docker hub image name
         DOCKER_IMAGE = 'rezaunnabi/isec6000-node-app'
     }
 
     options {
-        // keep only the latest 10 pipeline builds
+        // keep only the latest 10 builds
         buildDiscarder(logRotator(numToKeepStr: '10'))
 
         // add timestamps to pipeline logs
@@ -20,29 +16,43 @@ pipeline {
 
     stages {
         stage('Install Dependencies') {
+            agent {
+                docker {
+                    // use node 16 docker image as the build agent
+                    image 'node:16-bullseye'
+                    args '--user 1000:1000'
+                    reuseNode true
+                }
+            }
+
             steps {
                 echo 'installing node dependencies'
 
                 sh 'node --version'
                 sh 'npm --version'
-                sh 'docker --version'
-
                 sh 'npm ci'
             }
         }
 
         stage('Unit Tests') {
+            agent {
+                docker {
+                    // run tests using node 16
+                    image 'node:16-bullseye'
+                    args '--user 1000:1000'
+                    reuseNode true
+                }
+            }
+
             steps {
                 echo 'running unit tests'
 
-                sh 'npm test'
+                sh 'npm test -- --json --outputFile=test-results.json'
             }
 
             post {
                 always {
-                    // save test result information as an artifact
-                    sh 'npm test -- --json --outputFile=test-results.json || true'
-
+                    // save test results as an artifact
                     archiveArtifacts artifacts: 'test-results.json',
                                      allowEmptyArchive: true
                 }
@@ -50,16 +60,25 @@ pipeline {
         }
 
         stage('Security Scan') {
+            agent {
+                docker {
+                    // run dependency security scan using node 16
+                    image 'node:16-bullseye'
+                    args '--user 1000:1000'
+                    reuseNode true
+                }
+            }
+
             steps {
                 echo 'checking dependencies for high or critical vulnerabilities'
 
-                // fail the pipeline if high or critical vulnerabilities are found
+                // fail pipeline if high or critical vulnerabilities are found
                 sh 'npm audit --audit-level=high'
             }
 
             post {
                 always {
-                    // save the dependency security report
+                    // save full npm audit report
                     sh 'npm audit --json > npm-audit.json || true'
 
                     archiveArtifacts artifacts: 'npm-audit.json',
@@ -70,7 +89,11 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo 'building docker image'
+                echo 'checking docker connection'
+
+                sh 'docker version'
+
+                echo 'building application docker image'
 
                 sh '''
                     docker build \
