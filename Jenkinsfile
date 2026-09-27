@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'isec6000-node16-docker-agent:latest'
+            image 'rezaunnabi/isec6000-node16-docker-agent:latest'
             args '--user 1000:1000'
         }
     }
