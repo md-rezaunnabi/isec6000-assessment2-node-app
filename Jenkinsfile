@@ -13,6 +13,11 @@ pipeline {
         // add timestamps to pipeline logs
         timestamps()
     }
+	
+	triggers {
+		// check github for new commits every 5 minutes
+		pollSCM('H/5 * * * *')
+	}
 
     stages {
         stage('Install Dependencies') {
