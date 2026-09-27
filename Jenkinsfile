@@ -115,9 +115,5 @@ pipeline {
         failure {
             echo 'pipeline failed - check the stage logs'
         }
-
-        always {
-            deleteDir()
-        }
     }
 }
